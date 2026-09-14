@@ -1,0 +1,31 @@
+name: BD News Telegram Automation
+
+on:
+  schedule:
+    # ১. দুপুর ২:০০ টা (BST) = 08:00 AM (UTC)
+    - cron: '0 8 * * *'
+    # ২. বিকাল ৫:৪০ মিনিট (BST) = 11:40 AM (UTC)
+    - cron: '40 11 * * *'
+  # ম্যানুয়ালি গিটহাব থেকে রান করার অপশন
+  workflow_dispatch:
+
+jobs:
+  send-news-bulletin:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Code Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run News Bot
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: node src/bot.js --test
