@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import cron from 'node-cron';
-import { getNationalNews, getTrendingNews, getAINews } from './newsService.js';
+import { getNationalNews, getTrendingNews, getAINews, recordSentNews } from './newsService.js';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
@@ -59,6 +59,9 @@ export async function sendNewsBulletin() {
     `════════════════════\n${cat3}\n` +
     `════════════════════\n` +
     `✨ <i>ফেসবুকে অপ্রয়োজনীয় স্ক্রলিং না করে এক নজরে আপডেট থাকুন!</i>`;
+
+  // পাঠানো খবরের তালিকা হিস্ট্রিতে সেভ করা (যাতে ভবিষ্যতে ডুপ্লিকেট না হয়)
+  recordSentNews([...national, ...trending, ...ai]);
 
   // যদি টেলিগ্রামের ৪০৯৬ অক্ষরের চেয়ে ছোট হয়, তবে একটি মেসেজে পাঠাবে
   if (fullBulletin.length < 4000) {
