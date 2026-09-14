@@ -14,7 +14,7 @@ console.log("=========================================");
 /**
  * পুরো বুলেটিন তৈরি ও পাঠানো
  */
-export async function sendNewsBulletin() {
+export async function sendNewsBulletin(targetChatId = CHAT_ID) {
   console.log("🔄 ১৫টি বাছাইকৃত খবর ও সারসংক্ষেপ সংগ্রহ করা হচ্ছে...");
 
   const [national, trending, ai] = await Promise.all([
@@ -65,12 +65,12 @@ export async function sendNewsBulletin() {
   recordSentNews([...national, ...trending, ...ai]);
 
   if (fullBulletin.length < 4000) {
-    return await sendTelegramMessage(fullBulletin);
+    return await sendTelegramMessage(fullBulletin, targetChatId);
   } else {
-    console.log("ℹ️ মেসেজের সাইজ বড় হওয়ায় ৩টি পরিচ্ছন্ন মেসেজে পাঠানো হচ্ছে...");
-    await sendTelegramMessage(`<b>📰 দৈনিক বিশেষ বুলেটিন (১৫টি নির্বাচিত খবর)</b>\n📅 <i>${todayStr}</i>\n\n════════════════════\n${cat1}`);
-    await sendTelegramMessage(`════════════════════\n${cat2}`);
-    return await sendTelegramMessage(`════════════════════\n${cat3}\n════════════════════\n✨ <i>ফেসবুকে অপ্রয়োজনীয় স্ক্রলিং না করে এক নজরে আপডেট থাকুন!</i>`);
+    console.log("ℹ️ মেসেজের সাইজ বড় হওয়ায় ৩টি পরিচ্ছন্ন মেসেজে পাঠানো হচ্ছে...");
+    await sendTelegramMessage(`<b>📰 দৈনিক বিশেষ বুলেটিন (১৫টি নির্বাচিত খবর)</b>\n📅 <i>${todayStr}</i>\n\n════════════════════\n${cat1}`, targetChatId);
+    await sendTelegramMessage(`════════════════════\n${cat2}`, targetChatId);
+    return await sendTelegramMessage(`════════════════════\n${cat3}\n════════════════════\n✨ <i>ফেসবুকে অপ্রয়োজনীয় স্ক্রলিং না করে এক নজরে আপডেট থাকুন!</i>`, targetChatId);
   }
 }
 
@@ -150,16 +150,17 @@ async function startTelegramPoller() {
           console.log(`📩 মেসেজ এসেছে [${senderChatId}]: ${userText}`);
 
           if (userText === '/start') {
+            const userName = msg.from?.first_name || 'বন্ধু';
             await sendTelegramMessage(
-              `আসসালামু আলাইকুম বোরহান ভাই! 🌸\n\nআমি আপনার ব্যক্তিগত স্মার্ট বাংলা সহকারী <b>বক্কর (Bokkor)</b> 🤖\n\n` +
+              `আসসালামু আলাইকুম ${escapeHtml(userName)}! 🌸\n\nআমি আপনার ব্যক্তিগত স্মার্ট বাংলা সহকারী <b>বক্কর (Bokkor)</b> 🤖\n\n` +
               `• প্রতিদিন দুপুর ২:০০ ও বিকাল ৫:৪০ এ আমি আপনাকে <b>১৫টি বাছাইকৃত তাজা খবর</b> পাঠাব।\n` +
               `• তাৎক্ষণিক খবর পেতে লিখুন: <code>/news</code>\n` +
-              `• এছাড়া বাংলায় যেকোনো বিষয়ে কথা বলুন বা প্রশ্ন করুন, আমি মানুষের মতো উত্তর দেব!`,
+              `• এছাড়া বাংলায় যেকোনো বিষয়ে কথা বলুন বা প্রশ্ন করুন, আমি মানুষের মতো উত্তর দেব!`,
               senderChatId
             );
           } else if (userText === '/news' || userText === '/bulletin' || userText === 'খবর' || userText === 'নিউজ') {
-            await sendTelegramMessage("🔄 তাজা খবর সংগ্রহ করা হচ্ছে বোরহান ভাই, এক মুহূর্ত অপেক্ষা করুন...", senderChatId);
-            await sendNewsBulletin();
+            await sendTelegramMessage("🔄 তাজা খবর সংগ্রহ করা হচ্ছে, এক মুহূর্ত অপেক্ষা করুন...", senderChatId);
+            await sendNewsBulletin(senderChatId);
           } else {
             // জেমিনি এআই চ্যাট রিপ্লাই
             await sendTypingAction(senderChatId);
