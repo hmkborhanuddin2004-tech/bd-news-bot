@@ -1,23 +1,26 @@
 import 'dotenv/config';
 import cron from 'node-cron';
-import { getTopBDNews, getAINews } from './newsService.js';
+import { getNationalNews, getTrendingNews, getAINews } from './newsService.js';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
 console.log("=========================================");
-console.log("🤖 BD News Telegram Bot সার্ভিস প্রস্তুত...");
+console.log("🤖 BD News Telegram Bot (15 Items Bulletin)");
 console.log(`📱 Chat ID: ${CHAT_ID}`);
 console.log("=========================================");
 
 /**
- * টেলিগ্রামে বুলেটিন মেসেজ পাঠানোর মূল ফাংশন
+ * পুরো বুলেটিন তৈরি ও পাঠানো
  */
 export async function sendNewsBulletin() {
-  console.log("🔄 তাজা খবর সংগ্রহ করা হচ্ছে...");
-  
-  const bdNews = await getTopBDNews();
-  const aiNews = await getAINews();
+  console.log("🔄 ১৫টি বাছাইকৃত খবর ও সারসংক্ষেপ সংগ্রহ করা হচ্ছে...");
+
+  const [national, trending, ai] = await Promise.all([
+    getNationalNews(),
+    getTrendingNews(),
+    getAINews()
+  ]);
 
   const todayStr = new Date().toLocaleDateString('bn-BD', {
     weekday: 'long',
@@ -26,31 +29,47 @@ export async function sendNewsBulletin() {
     day: 'numeric'
   });
 
-  let message = `<b>🇧🇩 দৈনিক সংবাদ ও এআই বুলেটিন 📰</b>\n`;
-  message += `📅 <i>${todayStr}</i>\n\n`;
+  // ক্যাটাগরি ১: বাংলাদেশ ও জাতীয় শীর্ষ সংবাদ
+  let cat1 = `<b>🇧🇩 বাংলাদেশ ও জাতীয় শীর্ষ সংবাদ</b>\n`;
+  national.forEach((item, i) => {
+    cat1 += `\n${i + 1}️⃣ <b>${escapeHtml(item.title)}</b>\n`;
+    cat1 += `   📝 <i>${escapeHtml(item.summary)}</i>\n`;
+    cat1 += `   🔗 <a href="${item.link}">বিস্তারিত পড়ুন</a>\n`;
+  });
 
-  message += `<b>📌 বাংলাদেশের শীর্ষ সংবাদ ও সোশ্যাল ট্রেন্ডিং:</b>\n`;
-  if (bdNews.length === 0) {
-    message += `- কোনো নতুন খবর পাওয়া যায়নি।\n`;
+  // ক্যাটাগরি ২: ফেসবুক ও সোশ্যাল মিডিয়া ট্রেন্ডিং
+  let cat2 = `<b>🔥 ফেসবুক ও সোশ্যাল মিডিয়া ট্রেন্ডিং</b>\n`;
+  trending.forEach((item, i) => {
+    cat2 += `\n${i + 1}️⃣ <b>${escapeHtml(item.title)}</b>\n`;
+    cat2 += `   📝 <i>${escapeHtml(item.summary)}</i>\n`;
+    cat2 += `   🔗 <a href="${item.link}">বিস্তারিত পড়ুন</a>\n`;
+  });
+
+  // ক্যাটাগরি ৩: কৃত্রিম বুদ্ধিমত্তা (AI) ও প্রযুক্তি আপডেট
+  let cat3 = `<b>🤖 কৃত্রিম বুদ্ধিমত্তা (AI) ও প্রযুক্তি আপডেট</b>\n`;
+  ai.forEach((item, i) => {
+    cat3 += `\n${i + 1}️⃣ <b>${escapeHtml(item.title)}</b>\n`;
+    cat3 += `   📝 <i>${escapeHtml(item.summary)}</i>\n`;
+    cat3 += `   🔗 <a href="${item.link}">বিস্তারিত পড়ুন</a>\n`;
+  });
+
+  const fullBulletin = `<b>📰 দৈনিক বিশেষ বুলেটিন (১৫টি নির্বাচিত খবর)</b>\n📅 <i>${todayStr}</i>\n\n` +
+    `════════════════════\n${cat1}\n` +
+    `════════════════════\n${cat2}\n` +
+    `════════════════════\n${cat3}\n` +
+    `════════════════════\n` +
+    `✨ <i>ফেসবুকে অপ্রয়োজনীয় স্ক্রলিং না করে এক নজরে আপডেট থাকুন!</i>`;
+
+  // যদি টেলিগ্রামের ৪০৯৬ অক্ষরের চেয়ে ছোট হয়, তবে একটি মেসেজে পাঠাবে
+  if (fullBulletin.length < 4000) {
+    return await sendTelegramMessage(fullBulletin);
   } else {
-    bdNews.forEach((news, idx) => {
-      message += `\n${idx + 1}️⃣ <b>${escapeHtml(news.title)}</b>\n🔗 <a href="${news.link}">বিস্তারিত পড়ুন</a>\n`;
-    });
+    // অন্যথায় ক্যাটাগরি অনুযায়ী সুন্দর ৩টি মেসেজে পাঠাবে
+    console.log("ℹ️ মেসেজের সাইজ বড় হওয়ায় ৩টি পরিচ্ছন্ন মেসেজে পাঠানো হচ্ছে...");
+    await sendTelegramMessage(`<b>📰 দৈনিক বিশেষ বুলেটিন (১৫টি নির্বাচিত খবর)</b>\n📅 <i>${todayStr}</i>\n\n════════════════════\n${cat1}`);
+    await sendTelegramMessage(`════════════════════\n${cat2}`);
+    return await sendTelegramMessage(`════════════════════\n${cat3}\n════════════════════\n✨ <i>ফেসবুকে অপ্রয়োজনীয় স্ক্রলিং না করে এক নজরে আপডেট থাকুন!</i>`);
   }
-
-  message += `\n<b>🤖 কৃত্রিম বুদ্ধিমত্তা (AI) লেটেস্ট আপডেট:</b>\n`;
-  if (aiNews.length === 0) {
-    message += `- কোনো নতুন AI আপডেট পাওয়া যায়নি।\n`;
-  } else {
-    aiNews.forEach((news, idx) => {
-      message += `\n${idx + 1}️⃣ <b>${escapeHtml(news.title)}</b>\n🔗 <a href="${news.link}">বিস্তারিত পড়ুন</a>\n`;
-    });
-  }
-
-  message += `\n➖➖➖➖➖➖➖➖➖➖\n`;
-  message += `✨ <i>ফেসবুকে সময় নষ্ট না করে আপডেট থাকুন!</i>`;
-
-  return await sendTelegramMessage(message);
 }
 
 /**
@@ -77,35 +96,35 @@ async function sendTelegramMessage(htmlText) {
   if (!resData.ok) {
     console.error("❌ টেলিগ্রাম মেসেজ পাঠাতে ব্যর্থ:", resData);
   } else {
-    console.log("✅ সফলতা! টেলিগ্রামে মেসেজ পাঠানো হয়েছে। Message ID:", resData.result.message_id);
+    console.log("✅ সফলতা! মেসেজ পাঠানো হয়েছে। Message ID:", resData.result.message_id);
   }
   return resData;
 }
 
 function escapeHtml(text) {
+  if (!text) return '';
   return text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 }
 
-// কমান্ড লাইন থেকে রান করলে সরাসরি একটি টেস্ট বুলেটিন পাঠাবে
+// ম্যানুয়ালি টেস্ট রান
 if (process.argv.includes('--test')) {
-  console.log("🧪 টেস্ট বুলেটিন পাঠানো হচ্ছে...");
+  console.log("🧪 ১৫টি খবরের নতুন টেস্ট বুলেটিন পাঠানো হচ্ছে...");
   sendNewsBulletin();
 } else {
-  // ১. প্রতিদিন দুপুর ২:০০ টায় (14:00)
+  // প্রতিদিন দুপুর ২:০০ টায়
   cron.schedule('0 14 * * *', () => {
-    console.log("⏰ দুপুর ২:০০ টায় অটোমেটিক বুলেটিন ট্রিগার হলো...");
+    console.log("⏰ দুপুর ২:০০ টায় অটোমেটিক বুলেটিন ট্রিগার...");
     sendNewsBulletin();
   });
 
-  // ২. প্রতিদিন বিকাল ৫:৪০ টায় (17:40)
+  // প্রতিদিন বিকাল ৫:৪০ মিনিটে
   cron.schedule('40 17 * * *', () => {
-    console.log("⏰ বিকাল ৫:৪০ টায় অটোমেটিক বুলেটিন ট্রিগার হলো...");
+    console.log("⏰ বিকাল ৫:৪০ মিনিটে অটোমেটিক বুলেটিন ট্রিগার...");
     sendNewsBulletin();
   });
 
-  console.log("⏳ অটো-শিডিউলার সক্রিয় হয়েছে! প্রতিদিন দুপুর ২:০০ এবং বিকাল ৫:৪০ মিনিটে স্বয়ংক্রিয়ভাবে খবর পাঠানো হবে।");
-  console.log("💡 টেস্ট করতে রান করুন: npm start -- --test");
+  console.log("⏳ শিডিউলার চালু আছে: প্রতিদিন দুপুর ২:০০ ও বিকাল ৫:৪০ এ বুলেটিন পাঠানো হবে।");
 }
