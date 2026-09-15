@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import http from 'node:http';
 import cron from 'node-cron';
 import { getNationalNews, getTrendingNews, getAINews, recordSentNews } from './newsService.js';
 import { getAIChatResponse } from './aiChat.js';
@@ -181,17 +182,55 @@ if (process.argv.includes('--test')) {
   console.log("🧪 টেস্ট মোড: ১৫টি খবরের টেস্ট বুলেটিন পাঠানো হচ্ছে...");
   sendNewsBulletin();
 } else {
-  // ১. প্রতিদিন দুপুর ২:০০ টায় ক্রন শিডিউল
+  // ০. ক্লাউড ডিপ্লয়মেন্টের জন্য ওয়েব সার্ভার ও হেলথ চেক (Render/Koyeb উপযুক্ত)
+  const PORT = process.env.PORT || 3000;
+  const server = http.createServer((req, res) => {
+    if (req.url === '/' || req.url === '/health') {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(`
+        <!DOCTYPE html>
+        <html lang="bn">
+        <head>
+          <meta charset="UTF-8">
+          <title>বক্কর বট ২৪/৭</title>
+          <style>
+            body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+            .card { background: #1e293b; padding: 2.5rem; border-radius: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center; max-width: 450px; border: 1px solid #334155; }
+            .badge { display: inline-block; background: #22c55e; color: #022c22; font-weight: bold; padding: 0.25rem 0.75rem; border-radius: 9999px; margin-bottom: 1rem; }
+            h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+            p { color: #94a3b8; line-height: 1.5; }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <span class="badge">● ২৪/৭ অনলাইন</span>
+            <h1>🤖 বক্কর (Bokkor) বট সক্রিয়!</h1>
+            <p>স্মার্ট বাংলা এআই চ্যাট ও দৈনিক সংবাদ সেবা সফলভাবে সচল আছে।</p>
+          </div>
+        </body>
+        </html>
+      `);
+    } else {
+      res.writeHead(404);
+      res.end('Not Found');
+    }
+  });
+
+  server.listen(PORT, () => {
+    console.log(`🌐 ওয়েব সার্ভার চালু হয়েছে পোর্ট: ${PORT}`);
+  });
+
+  // ১. প্রতিদিন দুপুর ২:০০ টায় ক্রন শিডিউল (বাংলাদেশ সময়)
   cron.schedule('0 14 * * *', () => {
     console.log("⏰ দুপুর ২:০০ টায় অটোমেটিক বুলেটিন ট্রিগার...");
     sendNewsBulletin();
-  });
+  }, { timezone: "Asia/Dhaka" });
 
-  // ২. প্রতিদিন বিকাল ৫:৪০ মিনিটে ক্রন শিডিউল
+  // ২. প্রতিদিন বিকাল ৫:৪০ মিনিটে ক্রন শিডিউল (বাংলাদেশ সময়)
   cron.schedule('40 17 * * *', () => {
     console.log("⏰ বিকাল ৫:৪০ মিনিটে অটোমেটিক বুলেটিন ট্রিগার...");
     sendNewsBulletin();
-  });
+  }, { timezone: "Asia/Dhaka" });
 
   // ৩. লাইভ চ্যাট লিসেনার চালু করা
   startTelegramPoller();
