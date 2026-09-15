@@ -143,6 +143,32 @@ async function startTelegramPoller() {
       if (data.ok && Array.isArray(data.result)) {
         for (const update of data.result) {
           lastUpdateId = update.update_id;
+
+          // বাটন ক্লিক (Callback Query) হ্যান্ডেল করার স্মার্ট ফিচার
+          if (update.callback_query) {
+            const query = update.callback_query;
+            console.log(`🔘 বাটন ক্লিক এসেছে [${query.from.id}]: ${query.data}`);
+            try {
+              await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  callback_query_id: query.id,
+                  text: 'অনুরোধ গ্রহণ করা হয়েছে! প্রসেস করা হচ্ছে...',
+                  show_alert: false
+                })
+              });
+              if (query.data === 'publish_post') {
+                await sendTelegramMessage('⏳ <b>ফেসবুক অটোমেশন:</b> পোস্ট পাবলিশ করার অনুরোধ গ্রহণ করা হয়েছে...', query.from.id);
+              } else if (query.data === 'regen_draft') {
+                await sendTelegramMessage('🔄 <b>ফেসবুক অটোমেশন:</b> নতুন ড্রাফট তৈরি করা হচ্ছে...', query.from.id);
+              }
+            } catch (cbErr) {
+              console.error('Callback error:', cbErr.message);
+            }
+            continue;
+          }
+
           const msg = update.message;
           if (!msg || !msg.text) continue;
 
