@@ -3,6 +3,7 @@ import http from 'node:http';
 import cron from 'node-cron';
 import { getNationalNews, getTrendingNews, getAINews, recordSentNews } from './newsService.js';
 import { getAIChatResponse } from './aiChat.js';
+import { getAIResearchDigest } from './aiResearchService.js';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
@@ -181,13 +182,20 @@ async function startTelegramPoller() {
             await sendTelegramMessage(
               `আসসালামু আলাইকুম ${escapeHtml(userName)}! 🌸\n\nআমি আপনার ব্যক্তিগত স্মার্ট বাংলা সহকারী <b>বক্কর (Bokkor)</b> 🤖\n\n` +
               `• প্রতিদিন দুপুর ২:০০ ও বিকাল ৫:৪০ এ আমি আপনাকে <b>১৫টি বাছাইকৃত তাজা খবর</b> পাঠাব।\n` +
+              `• প্রতিদিন সকাল ৯:০০ টায় পাঠাব <b>স্পেশাল এআই রিসার্চ ও প্রম্পট ডাইজেস্ট</b>।\n` +
               `• তাৎক্ষণিক খবর পেতে লিখুন: <code>/news</code>\n` +
+              `• এআই আপডেট, ফ্রি টুলস ও পোস্ট পেতে লিখুন: <code>/ai</code>\n` +
               `• এছাড়া বাংলায় যেকোনো বিষয়ে কথা বলুন বা প্রশ্ন করুন, আমি মানুষের মতো উত্তর দেব!`,
               senderChatId
             );
           } else if (userText === '/news' || userText === '/bulletin' || userText === 'খবর' || userText === 'নিউজ') {
             await sendTelegramMessage("🔄 তাজা খবর সংগ্রহ করা হচ্ছে, এক মুহূর্ত অপেক্ষা করুন...", senderChatId);
             await sendNewsBulletin(senderChatId);
+          } else if (userText === '/ai' || userText === '/research' || userText === 'এআই' || userText === 'রিসার্চ') {
+            await sendTypingAction(senderChatId);
+            await sendTelegramMessage("🔍 <b>এআই রিসার্চ চলছে:</b> ২০টি গ্লোবাল সোর্স ও এআই ল্যাব স্ক্যান করা হচ্ছে, এক মুহূর্ত অপেক্ষা করুন...", senderChatId);
+            const digest = await getAIResearchDigest();
+            await sendTelegramMessage(digest, senderChatId);
           } else {
             // জেমিনি এআই চ্যাট রিপ্লাই
             await sendTypingAction(senderChatId);
@@ -246,13 +254,20 @@ if (process.argv.includes('--test')) {
     console.log(`🌐 ওয়েব সার্ভার চালু হয়েছে পোর্ট: ${PORT}`);
   });
 
-  // ১. প্রতিদিন দুপুর ২:০০ টায় ক্রন শিডিউল (বাংলাদেশ সময়)
+  // ১. প্রতিদিন সকাল ৯:০০ টায় স্পেশাল AI মাস্টারক্লাস ও কনটেন্ট ডাইজেস্ট (বাংলাদেশ সময়)
+  cron.schedule('0 9 * * *', async () => {
+    console.log("⏰ সকাল ৯:০০ টায় অটোমেটিক এআই রিসার্চ ডাইজেস্ট ট্রিগার...");
+    const digest = await getAIResearchDigest();
+    await sendTelegramMessage(digest);
+  }, { timezone: "Asia/Dhaka" });
+
+  // ২. প্রতিদিন দুপুর ২:০০ টায় ক্রন শিডিউল (বাংলাদেশ সময়)
   cron.schedule('0 14 * * *', () => {
     console.log("⏰ দুপুর ২:০০ টায় অটোমেটিক বুলেটিন ট্রিগার...");
     sendNewsBulletin();
   }, { timezone: "Asia/Dhaka" });
 
-  // ২. প্রতিদিন বিকাল ৫:৪০ মিনিটে ক্রন শিডিউল (বাংলাদেশ সময়)
+  // ৩. প্রতিদিন বিকাল ৫:৪০ মিনিটে ক্রন শিডিউল (বাংলাদেশ সময়)
   cron.schedule('40 17 * * *', () => {
     console.log("⏰ বিকাল ৫:৪০ মিনিটে অটোমেটিক বুলেটিন ট্রিগার...");
     sendNewsBulletin();
