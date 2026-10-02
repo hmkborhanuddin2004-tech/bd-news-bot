@@ -173,25 +173,28 @@ async function startTelegramPoller() {
           const msg = update.message;
           if (!msg || !msg.text) continue;
 
-          const senderChatId = msg.chat.id;
-          const userText = msg.text.trim();
-          console.log(`📩 মেসেজ এসেছে [${senderChatId}]: ${userText}`);
+          const rawText = msg.text.trim();
+          const userText = rawText.toLowerCase();
+          console.log(`📩 মেসেজ এসেছে [${senderChatId}]: ${rawText}`);
 
-          if (userText === '/start') {
+          const newsCommands = ['/news', '/new', 'news', 'new', 'খবর', 'নিউজ', 'সংবাদ', 'বুলেটিন', '/bulletin'];
+          const aiCommands = ['/ai', 'ai', '/research', 'research', 'এআই', 'রিসার্চ'];
+
+          if (userText === '/start' || userText === 'start') {
             const userName = msg.from?.first_name || 'বন্ধু';
             await sendTelegramMessage(
               `আসসালামু আলাইকুম ${escapeHtml(userName)}! 🌸\n\nআমি আপনার ব্যক্তিগত স্মার্ট বাংলা সহকারী <b>বক্কর (Bokkor)</b> 🤖\n\n` +
-              `• প্রতিদিন সকাল ৫:০০ ও বিকাল ৫:০০ এ আমি আপনাকে <b>১৫টি বাছাইকৃত তাজা খবর</b> পাঠাব।\n` +
+              `• প্রতিদিন সকাল ৭:০০ ও বিকাল ৫:০০ এ আমি আপনাকে <b>১৫টি বাছাইকৃত তাজা খবর</b> পাঠাব।\n` +
               `• প্রতিদিন সকাল ৯:০০ টায় পাঠাব <b>স্পেশাল এআই রিসার্চ ও প্রম্পট ডাইজেস্ট</b>।\n` +
               `• তাৎক্ষণিক খবর পেতে লিখুন: <code>/news</code>\n` +
               `• এআই আপডেট, ফ্রি টুলস ও পোস্ট পেতে লিখুন: <code>/ai</code>\n` +
               `• এছাড়া বাংলায় যেকোনো বিষয়ে কথা বলুন বা প্রশ্ন করুন, আমি মানুষের মতো উত্তর দেব!`,
               senderChatId
             );
-          } else if (userText === '/news' || userText === '/bulletin' || userText === 'খবর' || userText === 'নিউজ') {
+          } else if (newsCommands.includes(userText)) {
             await sendTelegramMessage("🔄 তাজা খবর সংগ্রহ করা হচ্ছে, এক মুহূর্ত অপেক্ষা করুন...", senderChatId);
             await sendNewsBulletin(senderChatId);
-          } else if (userText === '/ai' || userText === '/research' || userText === 'এআই' || userText === 'রিসার্চ') {
+          } else if (aiCommands.includes(userText)) {
             await sendTypingAction(senderChatId);
             await sendTelegramMessage("🔍 <b>এআই রিসার্চ চলছে:</b> ২০টি গ্লোবাল সোর্স ও এআই ল্যাব স্ক্যান করা হচ্ছে, এক মুহূর্ত অপেক্ষা করুন...", senderChatId);
             const digest = await getAIResearchDigest();
@@ -199,7 +202,7 @@ async function startTelegramPoller() {
           } else {
             // জেমিনি এআই চ্যাট রিপ্লাই
             await sendTypingAction(senderChatId);
-            const aiReply = await getAIChatResponse(userText);
+            const aiReply = await getAIChatResponse(rawText);
             await sendTelegramMessage(aiReply, senderChatId);
           }
         }
@@ -261,9 +264,9 @@ if (process.argv.includes('--test')) {
     await sendTelegramMessage(digest);
   }, { timezone: "Asia/Dhaka" });
 
-  // ২. প্রতিদিন সকাল ৫:০০ টায় ক্রন শিডিউল (বাংলাদেশ সময়)
-  cron.schedule('0 5 * * *', () => {
-    console.log("⏰ সকাল ৫:০০ টায় অটোমেটিক বুলেটিন ট্রিগার...");
+  // ২. প্রতিদিন সকাল ৭:০০ টায় ক্রন শিডিউল (বাংলাদেশ সময়)
+  cron.schedule('0 7 * * *', () => {
+    console.log("⏰ সকাল ৭:০০ টায় অটোমেটিক বুলেটিন ট্রিগার...");
     sendNewsBulletin();
   }, { timezone: "Asia/Dhaka" });
 
