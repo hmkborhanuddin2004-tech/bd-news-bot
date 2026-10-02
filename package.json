@@ -9,6 +9,7 @@
     "dev": "node --watch src/bot.js"
   },
   "dependencies": {
+    "cheerio": "^1.2.0",
     "dotenv": "^16.4.7",
     "fast-xml-parser": "^5.0.8",
     "libsodium-wrappers": "^0.8.4",

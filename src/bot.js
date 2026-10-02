@@ -4,6 +4,7 @@ import cron from 'node-cron';
 import { getNationalNews, getTrendingNews, getAINews, recordSentNews } from './newsService.js';
 import { getAIChatResponse } from './aiChat.js';
 import { getAIResearchDigest } from './aiResearchService.js';
+import { getAIMarketComparisonReport } from './aiMarketService.js';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
@@ -178,7 +179,8 @@ async function startTelegramPoller() {
           console.log(`📩 মেসেজ এসেছে [${senderChatId}]: ${rawText}`);
 
           const newsCommands = ['/news', '/new', 'news', 'new', 'খবর', 'নিউজ', 'সংবাদ', 'বুলেটিন', '/bulletin'];
-          const aiCommands = ['/ai', 'ai', '/research', 'research', 'এআই', 'রিসার্চ'];
+          const aiCommands = ['/ai', 'ai', '/research', 'research', 'এআই', 'রিসার্চ', '/prompt', 'প্রম্পট'];
+          const marketCommands = ['/compare', '/model', 'মডেল', 'কম্পেয়ার', 'তুলনা', '/market'];
 
           if (userText === '/start' || userText === 'start') {
             const userName = msg.from?.first_name || 'বন্ধু';
@@ -187,7 +189,8 @@ async function startTelegramPoller() {
               `• প্রতিদিন সকাল ৭:০০ ও বিকাল ৫:০০ এ আমি আপনাকে <b>১৫টি বাছাইকৃত তাজা খবর</b> পাঠাব।\n` +
               `• প্রতিদিন সকাল ৯:০০ টায় পাঠাব <b>স্পেশাল এআই রিসার্চ ও প্রম্পট ডাইজেস্ট</b>।\n` +
               `• তাৎক্ষণিক খবর পেতে লিখুন: <code>/news</code>\n` +
-              `• এআই আপডেট, ফ্রি টুলস ও পোস্ট পেতে লিখুন: <code>/ai</code>\n` +
+              `• এআই মাস্টারক্লাস ও প্রম্পট পেতে লিখুন: <code>/ai</code>\n` +
+              `• এআই মডেলদের তুলনা ও টোকেন খরচ জানতে: <code>/compare</code>\n` +
               `• এছাড়া বাংলায় যেকোনো বিষয়ে কথা বলুন বা প্রশ্ন করুন, আমি মানুষের মতো উত্তর দেব!`,
               senderChatId
             );
@@ -196,9 +199,14 @@ async function startTelegramPoller() {
             await sendNewsBulletin(senderChatId);
           } else if (aiCommands.includes(userText)) {
             await sendTypingAction(senderChatId);
-            await sendTelegramMessage("🔍 <b>এআই রিসার্চ চলছে:</b> ২০টি গ্লোবাল সোর্স ও এআই ল্যাব স্ক্যান করা হচ্ছে, এক মুহূর্ত অপেক্ষা করুন...", senderChatId);
+            await sendTelegramMessage("🔍 <b>এআই রিসার্চ চলছে:</b> ৩টি মূল স্তম্ভের প্র্যাকটিক্যাল মাস্টারক্লাস প্রস্তুত করা হচ্ছে...", senderChatId);
             const digest = await getAIResearchDigest();
             await sendTelegramMessage(digest, senderChatId);
+          } else if (marketCommands.includes(userText)) {
+            await sendTypingAction(senderChatId);
+            await sendTelegramMessage("⚔️ <b>এআই মার্কেট ওয়াচ:</b> বিশ্বসেরা এআই মডেলদের কম্পিটিশন ও টোকেন খরচের বিশ্লেষণ তৈরি করা হচ্ছে...", senderChatId);
+            const report = await getAIMarketComparisonReport();
+            await sendTelegramMessage(report, senderChatId);
           } else {
             // জেমিনি এআই চ্যাট রিপ্লাই
             await sendTypingAction(senderChatId);
